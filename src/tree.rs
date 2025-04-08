@@ -1,6 +1,4 @@
-use petgraph::{
-    stable_graph::{StableGraph, EdgeIndex, NodeIndex}
-};
+use petgraph::stable_graph::{StableGraph, EdgeIndex, NodeIndex};
 use thiserror::Error; 
 
 #[derive(Error, Debug)]

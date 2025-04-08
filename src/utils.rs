@@ -8,7 +8,7 @@ use crate::reference::Reference;
 use crate::errors::Error; 
 
 pub fn excel_to_date(serial: f64)  -> NaiveDate {
-    let start_date = NaiveDate::from_ymd(1899, 12, 30); 
+    let start_date = NaiveDate::from_ymd_opt(1899, 12, 30).expect("Invalid date"); 
     let mut duration = Duration::days(serial as i64); 
     let frac = (serial - serial.floor()) as i64; 
     if frac > 0 {

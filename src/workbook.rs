@@ -450,7 +450,8 @@ impl Book {
 
     pub fn is_calculated(&self, expr: Expr) -> bool {
         let value = self.resolve_ref(expr).unwrap(); 
-        value.into_raw_vec().iter().all(|x| ! x.is_formula())
+        let (vec, _) = value.into_raw_vec_and_offset();
+        vec.iter().all(|x| ! x.is_formula())
     }
 
     pub fn calculate(&mut self, debug: bool, progress: bool) -> Result<(), Error> {

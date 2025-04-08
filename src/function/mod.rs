@@ -114,11 +114,13 @@ fn sum(args: Vec<Value>) -> Value {
                 }
             }
         } else if let Value::Array2(arr2) = v {
-            for x in arr2 {
-                if x.is_num() {
-                    s += x
+            let (arr_vec, _) = arr2.into_raw_vec_and_offset();
+            s += Value::from(arr_vec.into_iter().fold(0.0, |mut s, v| {
+                if v.is_num() {
+                    s += v.as_num()
                 }
-            }
+                s
+            }))
         } else {
             s += Value::from(v.as_num())
         }
@@ -258,7 +260,7 @@ fn matchfn(lookup_value: Value, lookup_array: Value, match_type: Value) -> Value
 
 #[function]
 fn date(year: Value, month: Value, day: Value) -> Value {
-   Value::from(NaiveDate::from_ymd(year.as_num() as i32, month.as_num() as u32, day.as_num() as u32))
+   Value::from(NaiveDate::from_ymd_opt(year.as_num() as i32, month.as_num() as u32, day.as_num() as u32).expect("Invalid date"))
 }
 
 
@@ -371,7 +373,7 @@ impl Function for Iferror {
 #[function]
 fn eomonth(start_date: Value, months: Value) -> Value {
     let start_date: NaiveDate = start_date.as_date(); 
-    let bom = NaiveDate::from_ymd(start_date.year(), start_date.month(), 1);
+    let bom = NaiveDate::from_ymd_opt(start_date.year(), start_date.month(), 1).expect("Invalid date");
     let eom: NaiveDate; 
     if months.as_num() > 0.0 {
         eom = bom.checked_add_months(Months::new((months.as_num()+1.0) as u32)).unwrap(); 
@@ -380,7 +382,7 @@ fn eomonth(start_date: Value, months: Value) -> Value {
     } else {
         eom = bom.checked_add_months(Months::new(1)).unwrap(); 
     }
-    Value::from(eom.pred())
+    Value::from(eom.pred_opt().expect("Invalid date"))
 }
 
 #[function]
@@ -666,7 +668,8 @@ fn counta(args: Vec<Value>) -> Value {
                     })
                 },
                 Value::Array2(arr2) => {
-                    s + arr2.into_raw_vec().into_iter().fold(0, |s, v| match v {
+                    let (arr_vec, _) = arr2.into_raw_vec_and_offset();
+                    s + arr_vec.into_iter().fold(0, |s, v| match v {
                         Value::Empty => s, 
                         _ => s + 1
                     })
@@ -903,7 +906,7 @@ mod tests {
 
     #[test]
     fn test_date() -> Result<(), Error> {
-		assert_eq!(evaluate_str("DATE(2022, 1, 1)")?, Value::from(NaiveDate::from_ymd(2022, 1, 1)));
+		assert_eq!(evaluate_str("DATE(2022, 1, 1)")?, Value::from(NaiveDate::from_ymd_opt(2022, 1, 1).expect("Invalid date")));
         Ok(())
     }
 
@@ -924,10 +927,10 @@ mod tests {
 
     #[test]
     fn test_eomonth() -> Result<(), Error> {
-        assert_eq!(evaluate_str("EOMONTH(DATE(2004, 2, 29), 12)")?, Value::from(NaiveDate::from_ymd(2005, 2, 28))); 
-        assert_eq!(evaluate_str("EOMONTH(DATE(2004, 2, 28), 12)")?, Value::from(NaiveDate::from_ymd(2005, 2, 28))); 
-        assert_eq!(evaluate_str("EOMONTH(DATE(2004, 1, 15), -23)")?, Value::from(NaiveDate::from_ymd(2002, 2, 28))); 
-        assert_eq!(evaluate_str("EOMONTH(DATE(2004, 1, 15), 0)")?, Value::from(NaiveDate::from_ymd(2004, 1, 31))); 
+        assert_eq!(evaluate_str("EOMONTH(DATE(2004, 2, 29), 12)")?, Value::from(NaiveDate::from_ymd_opt(2005, 2, 28).expect("Invalid date"))); 
+        assert_eq!(evaluate_str("EOMONTH(DATE(2004, 2, 28), 12)")?, Value::from(NaiveDate::from_ymd_opt(2005, 2, 28).expect("Invalid date"))); 
+        assert_eq!(evaluate_str("EOMONTH(DATE(2004, 1, 15), -23)")?, Value::from(NaiveDate::from_ymd_opt(2002, 2, 28).expect("Invalid date"))); 
+        assert_eq!(evaluate_str("EOMONTH(DATE(2004, 1, 15), 0)")?, Value::from(NaiveDate::from_ymd_opt(2004, 1, 31).expect("Invalid date"))); 
         Ok(())
     }
 

@@ -125,7 +125,10 @@ impl Value {
     pub fn as_array(&self) -> ArrayType {
         match self {
             Value::Array(arr) => arr.to_vec(),
-            Value::Array2(arr2) => arr2.clone().into_raw_vec(), 
+            Value::Array2(arr2) => {
+                let (vec, _) = arr2.clone().into_raw_vec_and_offset();
+                vec
+            }, 
             c => vec![c.clone()], 
         }
     }
