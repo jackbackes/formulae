@@ -2,6 +2,8 @@
 
 Convert Excel workbooks into Rust logic.
 
+Forked from [natefduncan/excel-emulator](https://github.com/natefduncan/excel-emulator).
+
 ## Installation
 
 `cargo install formulae` for the `formulae` binary.
