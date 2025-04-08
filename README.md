@@ -1,18 +1,18 @@
-# Excel Emulator
+# Formulae
 
 Convert Excel workbooks into Rust logic. 
 
 ## Installation
 
-`cargo install excel-emulator` for the `excel` binary.
+`cargo install formulae` for the `formulae` binary.
 
 ## Usage
 
 ```
-excel-emulator 0.1.0
+formulae 0.1.0
 
 USAGE:
-    excel [OPTIONS] <PATH> [SUBCOMMAND]
+    formulae [OPTIONS] <PATH> [SUBCOMMAND]
 
 ARGS:
     <PATH>    
