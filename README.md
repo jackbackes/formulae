@@ -1,6 +1,6 @@
 # Formulae
 
-Convert Excel workbooks into Rust logic. 
+Convert Excel workbooks into Rust logic.
 
 ## Installation
 
@@ -8,7 +8,7 @@ Convert Excel workbooks into Rust logic.
 
 ## Usage
 
-```
+```sh
 formulae 0.1.0
 
 USAGE:
