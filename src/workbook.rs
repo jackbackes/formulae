@@ -10,6 +10,7 @@ use quick_xml::{
         Event, BytesText, 
         attributes::Attribute
     }, 
+    name::QName
 };
 use ndarray::{Array2, Array, s, Axis, ArrayView}; 
 use crate::{
@@ -89,8 +90,8 @@ impl Book {
             let mut reader: Reader<BufReader<ZipFile>> = Reader::<BufReader<ZipFile>>::from_reader(BufReader::new(f)); 
             let mut is_shared_string: bool = false; 
             loop {
-                match reader.read_event(&mut buf) {
-                    Ok(Event::Start(ref e)) if e.name() == b"t" => {
+                match reader.read_event_into(&mut buf) {
+                    Ok(Event::Start(ref e)) if e.name() == QName(b"t") => {
                         is_shared_string = true;
                     }, 
                     Ok(Event::Text(ref e)) => {
@@ -118,11 +119,11 @@ impl Book {
             let mut reader: Reader<BufReader<ZipFile>> = Reader::<BufReader<ZipFile>>::from_reader(BufReader::new(f)); 
             let mut is_cell_xfs: bool = false;
             loop {
-                match reader.read_event(&mut buf) {
-                    Ok(Event::Start(ref e)) if e.name() == b"cellXfs" || e.name() == b"xf" => {
+                match reader.read_event_into(&mut buf) {
+                    Ok(Event::Start(ref e)) if e.name() == QName(b"cellXfs") || e.name() == QName(b"xf") => {
                         match e.name() {
-                            b"cellXfs" => { is_cell_xfs = true; },
-                            b"xf" => {
+                            QName(b"cellXfs") => { is_cell_xfs = true; },
+                            QName(b"xf") => {
                                 if is_cell_xfs {
                                     self.styles.push(Book::decode_style(&reader, e)); 
                                 }
@@ -130,12 +131,12 @@ impl Book {
                             _ => {}
                         }
                     }, 
-                    Ok(Event::Empty(ref e)) if e.name() == b"xf" => {
+                    Ok(Event::Empty(ref e)) if e.name() == QName(b"xf") => {
                         if is_cell_xfs {
                             self.styles.push(Book::decode_style(&reader, e)); 
                         }
                     }, 
-                    Ok(Event::End(ref e)) if e.name() == b"cellXfs" => { is_cell_xfs = false; }, 
+                    Ok(Event::End(ref e)) if e.name() == QName(b"cellXfs") => { is_cell_xfs = false; }, 
                     Ok(Event::Eof) => break, 
                     _ => {}
                 }
@@ -151,12 +152,12 @@ impl Book {
             let mut reader: Reader<BufReader<ZipFile>> = Reader::<BufReader<ZipFile>>::from_reader(BufReader::new(f)); 
             let mut sheet_idx: usize = 0; 
             loop {
-                match reader.read_event(&mut buf) {
-                    Ok(Event::Empty(ref e)) if e.local_name() == b"sheet" => {
+                match reader.read_event_into(&mut buf) {
+                    Ok(Event::Empty(ref e)) if e.local_name().as_ref() == b"sheet" => {
                         for a in e.attributes() {
                             let a = a.unwrap();
-                            if let b"name" = a.key {
-                                let name = a.unescape_and_decode_value(&reader).unwrap();
+                            if let QName(b"name") = a.key {
+                                let name = String::from_utf8(a.value.to_vec()).unwrap();
                                 self.sheets.push(Sheet::from((name, sheet_idx))); 
                                 sheet_idx += 1; 
                             }
@@ -190,26 +191,26 @@ impl Book {
             let mut reader: Reader<BufReader<ZipFile>> = Reader::<BufReader<ZipFile>>::from_reader(BufReader::new(f)); 
             let mut flags = SheetFlags::new(); 
             loop {
-                match reader.read_event(&mut buf) {
-                    Ok(Event::Start(ref e)) if e.name() == b"c" => {
+                match reader.read_event_into(&mut buf) {
+                    Ok(Event::Start(ref e)) if e.name() == QName(b"c") => {
                         for a in e.attributes() {
                             let a = a.unwrap(); 
                             match a.key {
-                                b"r" => {
+                                QName(b"r") => {
                                     // Cell reference
                                     flags.reset(); 
-                                    flags.current_cell_reference = a.unescape_and_decode_value(&reader).unwrap();
+                                    flags.current_cell_reference = String::from_utf8(a.value.to_vec()).unwrap();
                                 }, 
-                                b"t" => {
+                                QName(b"t") => {
                                     // Cell type
-                                    let a_value = a.unescape_and_decode_value(&reader).unwrap();
+                                    let a_value = String::from_utf8(a.value.to_vec()).unwrap();
                                     if a_value == *"s" {
                                         flags.is_string = true; 
                                     }
                                 },
-                                b"s" => {
+                                QName(b"s") => {
                                     // Cell style / date
-                                    let cell_style_idx: usize = a.unescape_and_decode_value(&reader).unwrap().parse::<usize>().unwrap(); 
+                                    let cell_style_idx: usize = String::from_utf8(a.value.to_vec()).unwrap().parse::<usize>().unwrap(); 
                                     let style: &Style = self.styles.get(cell_style_idx).expect("Could not find style index");
                                     if style.number_format_id >= 14 && style.number_format_id <= 22 && style.apply_number_format {
                                         flags.is_date = true;
@@ -219,22 +220,22 @@ impl Book {
                             }
                         }
                     }, 
-                    Ok(Event::Start(ref e)) if e.name() == b"f" => {
+                    Ok(Event::Start(ref e)) if e.name() == QName(b"f") => {
                         // Formula flag
                         flags.is_formula = true;
                         for a in e.attributes() {
                             let a = a.unwrap();
-                            if a.key == b"ref" {
+                            if a.key.0 == b"ref" {
                                 flags.is_shared_formula = true; 
                             }
                         }
                     }, 
-                    Ok(Event::Empty(ref e)) if e.name() == b"f" => {
+                    Ok(Event::Empty(ref e)) if e.name() == QName(b"f") => {
                         // Shared formula
                         for a in e.attributes() {
                             let a = a.unwrap();
-                            if let b"si" = a.key {
-                                let formula_index: usize = a.unescape_and_decode_value(&reader).unwrap().parse::<usize>().unwrap(); 
+                            if let QName(b"si") = a.key {
+                                let formula_index: usize = String::from_utf8(a.value.to_vec()).unwrap().parse::<usize>().unwrap(); 
                                 let (start_cell, formula_text): &(Cell, String) = flags.shared_formulas.get(formula_index).unwrap(); 
                                 let base_reference = Reference::from(start_cell.as_tuple()); 
                                 let current_cell = Cell::from(flags.current_cell_reference.clone()); 
@@ -250,7 +251,7 @@ impl Book {
                             }
                         }
                     }, 
-                    Ok(Event::Start(ref e)) if e.name() == b"v" => {
+                    Ok(Event::Start(ref e)) if e.name() == QName(b"v") => {
                         // Value
                         flags.is_value = true; 
                     }, 
@@ -312,15 +313,12 @@ impl Book {
         zip::ZipArchive::new(file).expect("Unable to create zip") 
     }
 
-    pub fn decode_text_event(reader: &Reader<BufReader<ZipFile>>, e: &BytesText) -> String {
-        e.unescape_and_decode(reader).unwrap()
+    pub fn decode_text_event(_reader: &Reader<BufReader<ZipFile>>, e: &BytesText) -> String {
+        e.unescape().expect("Failed to unescape text").to_string()
     }
 
-    pub fn decode_attribute_usize(reader: &Reader<BufReader<ZipFile>>, a: Attribute) -> usize {
-        a.unescape_and_decode_value(reader)
-        .unwrap()
-        .parse::<usize>()
-        .unwrap() 
+    pub fn decode_attribute_usize(_reader: &Reader<BufReader<ZipFile>>, a: Attribute) -> usize {
+        String::from_utf8(a.value.to_vec()).unwrap().parse::<usize>().unwrap()
     }
 
     pub fn decode_style(reader: &Reader<BufReader<ZipFile>>, e: &BytesStart) -> Style {
@@ -328,7 +326,7 @@ impl Book {
         let mut apply_number_format: bool = false; 
         for a in e.attributes() {
             let a = a.unwrap(); 
-            match a.key {
+            match a.key.0 {
                 b"numFmtId" => {
                     number_format_id = Book::decode_attribute_usize(reader, a); 
                 }, 
