@@ -17,7 +17,7 @@ use crate::errors::Error;
 macro_rules! syntax {
     ($func_name: ident, $tag_string: literal, $output_token: expr) => {
         fn $func_name<'syntax>(s: &'syntax [u8]) -> IResult<&'syntax [u8], Token> {
-            map(tag($tag_string), |_| $output_token)(s)
+            map(tag($tag_string), |_| $output_token).parse(s)
         }
     };
 }
@@ -92,14 +92,14 @@ pub fn lex_syntax(input: &[u8]) -> IResult<&[u8], Token> {
             true_bool, 
             false_bool
         ))
-    ))(input)
+    )).parse(input)
 }
 
 // String
 fn pis(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     use std::result::Result::*;
 
-    let (i1, c1) = take(1usize)(input)?;
+    let (i1, c1) = take(1usize).parse(input)?;
     match c1.as_bytes() {
         b"\"" => Ok((input, vec![])),
         b"\\" => {
@@ -126,11 +126,11 @@ fn complete_byte_slice_str_from_utf8(c: &[u8]) -> Result<&str, Utf8Error> {
 }
 
 fn string(input: &[u8]) -> IResult<&[u8], String> {
-	delimited(tag("\""), map_res(pis, convert_vec_utf8), tag("\""))(input)
+	delimited(tag("\""), map_res(pis, convert_vec_utf8), tag("\"")).parse(input)
 }
 
 fn lex_string(input: &[u8]) -> IResult<&[u8], Token> {
-    map(string, Token::Text)(input)
+    map(string, Token::Text).parse(input)
 }
 
 // References 
@@ -146,7 +146,7 @@ fn lex_vrange(input: &[u8]) -> IResult<&[u8], Token> {
             let c = complete_byte_slice_str_from_utf8(s); 
             c.map(|syntax| Token::VRange(syntax.to_string()))
         }
-    )(input)
+    ).parse(input)
 }
 
 fn lex_hrange(input: &[u8]) -> IResult<&[u8], Token> {
@@ -161,7 +161,7 @@ fn lex_hrange(input: &[u8]) -> IResult<&[u8], Token> {
             let c = complete_byte_slice_str_from_utf8(s); 
             c.map(|syntax| Token::HRange(syntax.to_string()))
         }
-    )(input)
+    ).parse(input)
 }
 
 fn in_quote_sheet_name(chr: u8) -> bool {
@@ -190,7 +190,7 @@ fn lex_sheet_name(input: &[u8]) -> IResult<&[u8], &[u8]> {
     alt((
         take_while1(in_sheet_name),
         recognize(delimited(tag("'"), take_while(in_quote_sheet_name), tag("'")))
-    ))(input)
+    )).parse(input)
 }
 
 fn lex_sheet(input: &[u8]) -> IResult<&[u8], Token> {
@@ -203,7 +203,7 @@ fn lex_sheet(input: &[u8]) -> IResult<&[u8], Token> {
             let c = complete_byte_slice_str_from_utf8(s);
             c.map(|syntax| Token::Sheet(syntax.replace('\'', "")))
         }
-    )(input)
+    ).parse(input)
 }
 
 fn lex_multisheet(input: &[u8]) -> IResult<&[u8], Token> {
@@ -213,7 +213,7 @@ fn lex_multisheet(input: &[u8]) -> IResult<&[u8], Token> {
             let x = complete_byte_slice_str_from_utf8(a).unwrap();
             Token::MultiSheet(x.to_string())
         }
-    )(input)
+    ).parse(input)
 }
 
 fn lex_cell(input: &[u8]) -> IResult<&[u8], Token> {
@@ -223,7 +223,7 @@ fn lex_cell(input: &[u8]) -> IResult<&[u8], Token> {
             let s = complete_byte_slice_str_from_utf8(c).unwrap(); 
             Token::Cell(s.to_string())
         }
-    )(input)
+    ).parse(input)
 }
 
 fn lex_range(input: &[u8]) -> IResult<&[u8], Token> {
@@ -232,7 +232,7 @@ fn lex_range(input: &[u8]) -> IResult<&[u8], Token> {
         |(a, b)| {
             Token::Range(format!("{}:{}", a, b))
         }
-    )(input)
+    ).parse(input)
 }
 
 fn lex_references(input: &[u8]) -> IResult<&[u8], Token> {
@@ -243,7 +243,7 @@ fn lex_references(input: &[u8]) -> IResult<&[u8], Token> {
         lex_vrange, 
         lex_range, 
         lex_cell
-    ))(input)
+    )).parse(input)
 }
 
 // Integer
@@ -258,7 +258,7 @@ fn lex_int(input: &[u8]) -> IResult<&[u8], Token> {
             complete_str_from_str,
         ),
         Token::Integer,
-    )(input)
+    ).parse(input)
 }
 
 fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
@@ -270,7 +270,7 @@ fn lex_float(input: &[u8]) -> IResult<&[u8], Token> {
         |c: &str| {
             Token::Float(c.parse::<f64>().unwrap())
         }
-    )(input)
+    ).parse(input)
 }
 
 // Ident
@@ -281,7 +281,7 @@ fn lex_ident(input: &[u8]) -> IResult<&[u8], Token> {
             complete_str_from_str,
         ),
         Token::Ident,
-    )(input)
+    ).parse(input)
 }
 
 // Tokens
@@ -293,11 +293,11 @@ fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
         lex_float, 
         lex_int, 
         lex_ident, 
-    ))(input)
+    )).parse(input)
 }
 
 fn lex_tokens(input: &[u8]) -> IResult<&[u8], Vec<Token>> {
-    many0(delimited(multispace0, lex_token, multispace0))(input)
+    many0(delimited(multispace0, lex_token, multispace0)).parse(input)
 }
 
 pub struct Lexer; 

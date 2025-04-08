@@ -1,20 +1,20 @@
 [package]
-name = "excel-emulator"
+name = "formulae"
 version = "0.1.0"
 edition = "2024"
 description = "Convert Excel workbooks into Rust logic."
 readme = "README.md"
-repository = "https://github.com/natefduncan/excel-emulator.git"
+repository = "https://github.com/jackbackes/formulae.git"
 keywords = ["excel", "xlsx", "emulator"]
 categories = ["command-line-utilities", "parsing"] 
 license-file = "LICENSE"
 
 [lib]
-name = "excel_lib"
+name = "formulae_lib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "excel"
+name = "formulae"
 path = "src/bin.rs"
 
 [dependencies]
@@ -23,7 +23,7 @@ chrono = "0.4.22"
 clap = { version = "4.5.35", features = ["derive"] }
 excel-emulator-macro = { version = "0.1.0", path = "excel-emulator-macro" }
 ndarray = "0.16.1"
-nom = "7.1.1"
+nom = "8.0.0"
 petgraph = "0.8.1"
 quick-xml = { version = "0.37.4", features = ["serde", "serialize", "encoding"] }
 regex = "1.6.0"

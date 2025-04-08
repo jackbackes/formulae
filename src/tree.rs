@@ -7,9 +7,13 @@ pub enum TreeError {
     NodeMissing(u32)
 }
 
-pub trait NodeTrait { }
-pub trait EdgeTrait { } 
+pub trait NodeTrait {
+}
+pub trait EdgeTrait {
+} 
 pub type NodeId = NodeIndex<u32>; 
+pub type ParentId = NodeId;
+pub type ChildId = NodeId;
 pub type EdgeId = EdgeIndex<u32>; 
 pub type Node = Box<dyn NodeTrait>; 
 pub type Edge = Box<dyn EdgeTrait>; 
@@ -43,7 +47,8 @@ pub fn remove_edge(tree: &mut Tree, edge_id: EdgeId) {
 
 #[cfg(test)]
 mod tests {
-	use crate::tree::*; 
+
+use crate::tree::*; 
 
 	struct Node(u32); 
 	// struct Edge(String); 

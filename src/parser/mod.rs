@@ -21,7 +21,7 @@ use crate::{
 macro_rules! tag_token (
 	($func_name:ident, $tag: expr) => (
 		fn $func_name(tokens: Tokens) -> IResult<Tokens, Tokens> {
-			verify(take(1usize), |t: &Tokens| t.tok[0] == $tag)(tokens)
+			verify(take(1usize), |t: &Tokens| t.tok[0] == $tag).parse(tokens)
 		}
 	)
 );
@@ -44,7 +44,7 @@ tag_token!(rbrace_tag, Token::RBrace);
 tag_token!(eof_tag, Token::EOF); 
 
 fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
-    let (i1, t1) = take(1usize)(input)?;
+    let (i1, t1) = take(1usize).parse(input)?;
 	if t1.tok.is_empty() {
         Err(Err::Error(NomError::new(input, ErrorKind::Tag)))
     } else {
@@ -59,11 +59,11 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
 }
 
 fn parse_literal_expr(input: Tokens) -> IResult<Tokens, Expr> {
-    map(parse_literal, Expr::Literal)(input)
+    map(parse_literal, Expr::Literal).parse(input)
 }
 
 fn parse_error(input: Tokens) -> IResult<Tokens, ExcelError> {
-    let (i1, t1) = take(1usize)(input)?;
+    let (i1, t1) = take(1usize).parse(input)?;
 	if t1.tok.is_empty() {
         Err(Err::Error(NomError::new(input, ErrorKind::Tag)))
     } else {
@@ -82,11 +82,11 @@ fn parse_error(input: Tokens) -> IResult<Tokens, ExcelError> {
 }
 
 fn parse_error_expr(input: Tokens) -> IResult<Tokens, Expr> {
-    map(parse_error, Expr::Error)(input)
+    map(parse_error, Expr::Error).parse(input)
 }
 
 fn parse_ident(input: Tokens) -> IResult<Tokens, Token> {
-    let (i1, t1) = take(1usize)(input)?;
+    let (i1, t1) = take(1usize).parse(input)?;
     if t1.tok.is_empty() {
         Err(Err::Error(NomError::new(input, ErrorKind::Tag)))
     } else if matches!(t1.tok[0], Token::Ident(_)) {
@@ -109,7 +109,7 @@ fn parse_func_expr(input: Tokens) -> IResult<Tokens, Expr> {
         |(ident, exprs)| {
             Expr::Func { name: format!("{}", ident), args: exprs }
         }
-   )(input)
+   ).parse(input)
 }
 
 fn parse_prefix_expr(input: Tokens) -> IResult<Tokens, Expr> {
@@ -124,7 +124,7 @@ fn parse_prefix_expr(input: Tokens) -> IResult<Tokens, Expr> {
             let box_expr = Box::new(expr); 
             Expr::Prefix(prefix, box_expr)
         }
-    )(input)
+    ).parse(input)
 }
 
 
@@ -134,7 +134,7 @@ fn parse_comma_exprs(input: Tokens) -> IResult<Tokens, Expr> {
         |expr| {
             expr
         }
-    )(input)
+    ).parse(input)
 }
 
 fn parse_exprs(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
@@ -143,7 +143,7 @@ fn parse_exprs(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
         |(first, second)| {
             [&vec![first][..], &second[..]].concat()
         }
-    )(input)
+    ).parse(input)
 }
 
 fn empty_boxed_vec(input: Tokens) -> IResult<Tokens, Vec<Expr>> {
@@ -160,11 +160,11 @@ fn parse_array_expr(input: Tokens) -> IResult<Tokens, Expr> {
         |exprs| {
             Expr::Array(exprs)
         }
-    )(input)
+    ).parse(input)
 }
 
 fn parse_sheet_or_multisheet(input: Tokens) -> IResult<Tokens, Token> {
-    let (i1, t1) = take(1usize)(input)?;
+    let (i1, t1) = take(1usize).parse(input)?;
     if t1.tok.is_empty() {
         Err(Err::Error(NomError::new(input, ErrorKind::Tag)))
     } else {
@@ -177,7 +177,7 @@ fn parse_sheet_or_multisheet(input: Tokens) -> IResult<Tokens, Token> {
 }
 
 fn parse_cell_or_range(input: Tokens) -> IResult<Tokens, Token> {
-    let (i1, t1) = take(1usize)(input)?;
+    let (i1, t1) = take(1usize).parse(input)?;
     if t1.tok.is_empty() {
         Err(Err::Error(NomError::new(input, ErrorKind::Tag)))
     } else {
@@ -202,12 +202,12 @@ fn parse_reference_expr(input: Tokens) -> IResult<Tokens, Expr> {
                 sheet, reference: format!("{}", range)
             }
        }
-    )(input)
+    ).parse(input)
 }
 
 
 fn parse_paren_expr(input: Tokens) -> IResult<Tokens, Expr> {
-    delimited(lparen_tag, parse_expr, rparen_tag)(input)
+    delimited(lparen_tag, parse_expr, rparen_tag).parse(input)
 }
 
 
@@ -240,7 +240,7 @@ fn parse_infix_tags(input: Tokens) -> IResult<Tokens, Infix> {
         map(langle_tag, |_| Infix::LessThan), 
         map(exponent_tag, |_| Infix::Exponent), 
         map(ampersand_tag, |_| Infix::Ampersand), 
-    ))(input)
+    )).parse(input)
 }
 
 fn parse_pratt(input: Tokens, precedence: Precedence) -> IResult<Tokens, Expr> {
@@ -249,7 +249,7 @@ fn parse_pratt(input: Tokens, precedence: Precedence) -> IResult<Tokens, Expr> {
 }
 
 fn go_parse_pratt(input: Tokens, lhs: Expr, precedence: Precedence) -> IResult<Tokens, Expr> {
-    let (i1, t1) = take(1usize)(input)?; 
+    let (i1, t1) = take(1usize).parse(input)?; 
     if t1.tok.is_empty() {
         Ok((i1, lhs))
     } else {
@@ -274,7 +274,7 @@ fn go_parse_pratt(input: Tokens, lhs: Expr, precedence: Precedence) -> IResult<T
 }
 
 fn parse_infix(input: Tokens, lhs: Expr) -> IResult<Tokens, Expr> {
-    let (_i1, t1) = take(1usize)(input)?;
+    let (_i1, t1) = take(1usize).parse(input)?;
     if t1.tok.is_empty() {
         Err(Err::Error(error_position!(input, ErrorKind::Tag)))
     } else {
@@ -298,18 +298,18 @@ fn parse_atom_expr(input: Tokens) -> IResult<Tokens, Expr> {
         parse_array_expr, 
         parse_reference_expr, 
         parse_literal_expr, 
-    ))(input)
+    )).parse(input)
 }
 
 fn parse_expr(input: Tokens) -> IResult<Tokens, Expr> {
     alt((
         parse_infix_expr, 
         parse_atom_expr,
-    ))(input)
+    )).parse(input)
 }
 
 pub fn parse(input: Tokens) -> IResult<Tokens, Expr> {
-    terminated(parse_expr, eof_tag)(input)
+    terminated(parse_expr, eof_tag).parse(input)
 }
 
 pub fn parse_str(s: &str) -> Result<Expr, Error> {

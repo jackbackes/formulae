@@ -1,6 +1,5 @@
 use nom::*; 
 use std::iter::Enumerate;
-use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 use std::fmt; 
 
 #[derive(Debug, Clone)]
@@ -129,18 +128,30 @@ impl<'a> Tokens<'a> {
     }
 }
 
-impl<'a> InputLength for Tokens<'a> {
+impl <'a> Input for Tokens<'a> {
+    type Item = &'a Token;
+
+    type Iter = std::slice::Iter<'a, Token>;
+
+    type IterIndices = Enumerate<std::slice::Iter<'a, Token>>;
+
     fn input_len(&self) -> usize {
         self.tok.len()
     }
-}
 
-impl<'a> InputTake for Tokens<'a> {
     fn take(&self, count: usize) -> Self {
         Tokens {
             tok: &self.tok[0..count],
             start: 0,
             end: count,
+        }
+    }
+
+    fn take_from(&self, count: usize) -> Self {
+        Tokens {
+            tok: &self.tok[count..],
+            start: 0,
+            end: self.tok.len() - count,
         }
     }
 
@@ -158,69 +169,21 @@ impl<'a> InputTake for Tokens<'a> {
         };
         (second, first)
     }
-}
 
-impl InputLength for Token {
-    fn input_len(&self) -> usize {
-        1
-    }
-}
-
-impl<'a> Slice<Range<usize>> for Tokens<'a> {
-    fn slice(&self, range: Range<usize>) -> Self {
-        Tokens {
-            tok: self.tok.slice(range.clone()),
-            start: self.start + range.start,
-            end: self.start + range.end,
-        }
-    }
-}
-
-impl<'a> Slice<RangeTo<usize>> for Tokens<'a> {
-    fn slice(&self, range: RangeTo<usize>) -> Self {
-        self.slice(0..range.end)
-    }
-}
-
-impl<'a> Slice<RangeFrom<usize>> for Tokens<'a> {
-    #[inline]
-    fn slice(&self, range: RangeFrom<usize>) -> Self {
-        self.slice(range.start..self.end - self.start)
-    }
-}
-
-impl<'a> Slice<RangeFull> for Tokens<'a> {
-    #[inline]
-    fn slice(&self, _: RangeFull) -> Self {
-        Tokens {
-            tok: self.tok,
-            start: self.start,
-            end: self.end,
-        }
-    }
-}
-
-impl<'a> InputIter for Tokens<'a> {
-    type Item = &'a Token;
-    type Iter = Enumerate<::std::slice::Iter<'a, Token>>;
-    type IterElem = ::std::slice::Iter<'a, Token>;
-
-    #[inline]
-    fn iter_indices(&self) -> Enumerate<::std::slice::Iter<'a, Token>> {
-        self.tok.iter().enumerate()
-    }
-    #[inline]
-    fn iter_elements(&self) -> ::std::slice::Iter<'a, Token> {
-        self.tok.iter()
-    }
-    #[inline]
     fn position<P>(&self, predicate: P) -> Option<usize>
-    where
-        P: Fn(Self::Item) -> bool,
-    {
+      where
+        P: Fn(Self::Item) -> bool {
         self.tok.iter().position(predicate)
     }
-    #[inline]
+
+    fn iter_elements(&self) -> Self::Iter {
+        self.tok.iter()
+    }
+
+    fn iter_indices(&self) -> Self::IterIndices {
+        self.tok.iter().enumerate()
+    }
+
     fn slice_index(&self, count: usize) -> Result<usize, Needed> {
         if self.tok.len() >= count {
             Ok(count)
@@ -229,5 +192,3 @@ impl<'a> InputIter for Tokens<'a> {
         }
     }
 }
-
-impl<'a> UnspecializedInput for Tokens<'a> { }
